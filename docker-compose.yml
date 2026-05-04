@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: sqlite:///var/lib/medscan/medscan.db
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-prod}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-jwt}
+      OMNIDIMENSION_API_BASE: ${OMNIDIMENSION_API_BASE:-}
+      OMNIDIMENSION_API_KEY: ${OMNIDIMENSION_API_KEY:-}
+    ports:
+      - "5000:5000"
+    volumes:
+      - medscan-data:/var/lib/medscan
+      - medscan-uploads:/app/uploads
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  medscan-data: {}
+  medscan-uploads: {}

@@ -1,0 +1,102 @@
+"""MedScan Flask application factory."""
+from __future__ import annotations
+
+import os
+
+from flask import Flask, jsonify
+from flask_cors import CORS
+
+from app.config import get_config
+from app.extensions import db, jwt
+from app.utils.logger import configure_logging
+from app.utils.sqlite_schema import patch_sqlite_users_columns
+
+
+def create_app(config_name: str | None = None):
+    configure_logging(os.environ.get("LOG_LEVEL"))
+    app = Flask(__name__)
+    cfg = get_config()
+    app.config.from_object(cfg)
+    if config_name == "production" or os.environ.get("FLASK_ENV") == "production":
+        uri = os.environ.get("DATABASE_URL", "")
+        if uri:
+            # SQLAlchemy 2 / Heroku-style postgres URL
+            if uri.startswith("postgres://"):
+                uri = uri.replace("postgres://", "postgresql://", 1)
+            app.config["SQLALCHEMY_DATABASE_URI"] = uri
+
+    os.makedirs(app.config["MEDSCAN_UPLOAD_FOLDER"], exist_ok=True)
+
+    db.init_app(app)
+    jwt.init_app(app)
+    CORS(app, resources={r"/api/*": {"origins": os.environ.get("CORS_ORIGINS", "*")}})
+
+    @jwt.unauthorized_loader
+    def _jwt_unauthorized(reason):
+        return jsonify({"status": "error", "message": "Unauthorized", "detail": reason}), 401
+
+    @jwt.invalid_token_loader
+    def _jwt_invalid(reason):
+        return jsonify({"status": "error", "message": "Invalid token", "detail": reason}), 422
+
+    @app.get("/")
+    def root():
+        """JSON-only API — no HTML shell at /. Use the React app (e.g. :5173) for the UI."""
+        return jsonify(
+            {
+                "service": "medscan-api",
+                "status": "ok",
+                "docs": "REST APIs live under /api/* — try GET /health",
+                "examples": [
+                    "GET /health",
+                    "GET /api/search-medicine?query=paracetamol",
+                ],
+            }
+        )
+
+    @app.get("/health")
+    def health():
+        return jsonify({"status": "ok", "service": "medscan-api"})
+
+    from app.routes import (
+        adherence,
+        auth,
+        chatbot,
+        dashboard,
+        history,
+        medicine,
+        pharmacy,
+        prescription,
+        profile,
+        refill,
+        reminder,
+        reports,
+    )
+
+    app.register_blueprint(auth.bp)
+    app.register_blueprint(medicine.bp)
+    app.register_blueprint(prescription.bp)
+    app.register_blueprint(prescription.bp_public)
+    app.register_blueprint(dashboard.bp)
+    app.register_blueprint(reminder.bp)
+    app.register_blueprint(reports.bp)
+    app.register_blueprint(reports.bp_lab)
+    app.register_blueprint(chatbot.bp)
+    app.register_blueprint(adherence.bp)
+    app.register_blueprint(history.bp)
+    app.register_blueprint(profile.bp)
+    app.register_blueprint(pharmacy.bp)
+    app.register_blueprint(refill.bp)
+
+    with app.app_context():
+        db.create_all()
+        patch_sqlite_users_columns(db)
+
+    try:
+        from app.scheduler import init_scheduler
+
+        init_scheduler(app)
+    except Exception:
+        pass
+
+    return app

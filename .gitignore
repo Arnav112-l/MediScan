@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+frontend/.env
+medscan.db
+uploads/
+node_modules/
+dist/
+*.egg-info/
+*.db

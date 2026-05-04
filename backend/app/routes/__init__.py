@@ -1,0 +1,2 @@
+# noqa: namespace
+
