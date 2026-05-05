@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://mediscan-6unm.onrender.com/api/:path*"
+    }
+  ]
+}
