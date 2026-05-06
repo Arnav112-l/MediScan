@@ -1,8 +1,11 @@
 """Medicine search and comparison — Redis, DB cache, Playwright scraping."""
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from app.extensions import db
 from app.models.medicine import SearchCache
@@ -117,17 +120,21 @@ def search_medicine(
         _persist_price_snapshots(normalized, outcome.prices)
     try:
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        raise
+        logger.warning("Cache/price persist failed (non-fatal): %s", exc)
 
     set_cache(redis_key, payload)
 
     if user_id is not None:
-        cheapest = outcome.prices[0] if outcome.prices else None
-        summary = {"cheapest": cheapest, "pharmacies": len(outcome.prices)}
-        db.session.add(SearchHistory(user_id=user_id, query=normalized, summary_json=summary))
-        db.session.commit()
+        try:
+            cheapest = outcome.prices[0] if outcome.prices else None
+            summary = {"cheapest": cheapest, "pharmacies": len(outcome.prices)}
+            db.session.add(SearchHistory(user_id=user_id, query=normalized, summary_json=summary))
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            logger.warning("SearchHistory persist failed (non-fatal): %s", exc)
 
     return payload, None, None
 

@@ -1,6 +1,7 @@
 """MedScan Flask application factory."""
 from __future__ import annotations
 
+import logging
 import os
 
 from flask import Flask, jsonify
@@ -10,6 +11,8 @@ from app.config import get_config
 from app.extensions import db, jwt
 from app.utils.logger import configure_logging
 from app.utils.sqlite_schema import patch_sqlite_users_columns
+
+_log = logging.getLogger(__name__)
 
 
 def create_app(config_name: str | None = None):
@@ -38,6 +41,16 @@ def create_app(config_name: str | None = None):
     @jwt.invalid_token_loader
     def _jwt_invalid(reason):
         return jsonify({"status": "error", "message": "Invalid token", "detail": reason}), 422
+
+    @app.errorhandler(500)
+    def _handle_500(exc):
+        _log.exception("Unhandled 500 error")
+        return jsonify({"status": "error", "message": f"Internal server error: {exc}"}), 500
+
+    @app.errorhandler(Exception)
+    def _handle_exception(exc):
+        _log.exception("Unhandled exception: %s", exc)
+        return jsonify({"status": "error", "message": f"Internal server error: {exc}"}), 500
 
     @app.get("/")
     def root():

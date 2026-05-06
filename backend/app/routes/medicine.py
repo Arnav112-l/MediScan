@@ -31,7 +31,11 @@ def search_medicine_route():
     q = request.args.get("query") or request.args.get("q") or ""
     uid = _uid_optional()
     force = request.args.get("refresh") == "1"
-    payload, code, msg = search_medicine(q, user_id=uid, force_refresh=force)
+    try:
+        payload, code, msg = search_medicine(q, user_id=uid, force_refresh=force)
+    except Exception as exc:
+        logger.exception("Unhandled error in search_medicine for query=%r", q)
+        return err(f"Internal error: {exc}", status=500)
     if code == 400:
         return err(msg or "Bad request", status=400)
     if code == 502:
@@ -46,7 +50,11 @@ def compare_route():
     medicine = request.args.get("medicine") or request.args.get("query") or request.args.get("q") or ""
     uid = _uid_optional()
     force = request.args.get("refresh") == "1"
-    payload, code, msg = compare_medicine(medicine, user_id=uid, force_refresh=force)
+    try:
+        payload, code, msg = compare_medicine(medicine, user_id=uid, force_refresh=force)
+    except Exception as exc:
+        logger.exception("Unhandled error in compare_medicine for query=%r", medicine)
+        return err(f"Internal error: {exc}", status=500)
     if code == 400:
         return err(msg or "Bad request", status=400)
     if code == 502:
