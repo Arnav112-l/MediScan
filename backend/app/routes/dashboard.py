@@ -1,6 +1,7 @@
 """Dashboard API — Redis-cached summary."""
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 from flask import Blueprint, request
@@ -10,11 +11,28 @@ from app.models.prescription import Prescription
 from app.models.reminder import AdherenceLog, Reminder
 from app.models.search_history import SearchHistory
 from app.services.comparison_service import search_medicine
+from app.utils.logger import get_logger
 from app.utils.redis_cache import cache_key_dashboard, get_cache, set_cache
-from app.utils.responses import ok
+from app.utils.responses import err, ok
 
 bp = Blueprint("dashboard", __name__, url_prefix="/api")
 
+logger = get_logger(__name__)
+
+
+def _summary_as_dict(raw):
+    """SearchHistory.summary_json is JSON; tolerate legacy string / wrong types."""
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, dict) else {}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return {}
 
 
 def _build_dashboard(uid: int):
@@ -38,8 +56,8 @@ def _build_dashboard(uid: int):
     # Monthly savings estimate from recent search summaries (best-effort)
     savings_hint = 0.0
     for s in recent:
-        summ = s.summary_json or {}
-        ch = summ.get("cheapest") or {}
+        summ = _summary_as_dict(s.summary_json)
+        ch = summ.get("cheapest") if isinstance(summ.get("cheapest"), dict) else {}
         try:
             savings_hint += float(ch.get("price") or 0) * 0.05
         except (TypeError, ValueError):
@@ -50,7 +68,9 @@ def _build_dashboard(uid: int):
             {
                 "id": r.id,
                 "medicine_name": r.medicine_name,
-                "next_trigger": r.next_trigger.isoformat() if r.next_trigger else None,
+                "next_trigger": r.next_trigger.isoformat()
+                if hasattr(r.next_trigger, "isoformat")
+                else None,
                 "dose": r.dose,
             }
             for r in upcoming
@@ -62,7 +82,13 @@ def _build_dashboard(uid: int):
             "adherence_score_percent": adherence_pct,
             "monthly_savings_estimate_inr": round(savings_hint, 2),
         },
-        "recent_searches": [{"query": x.query, "created_at": x.created_at.isoformat()} for x in recent],
+        "recent_searches": [
+            {
+                "query": x.query,
+                "created_at": x.created_at.isoformat() if hasattr(x.created_at, "isoformat") else None,
+            }
+            for x in recent
+        ],
         "medicines_today": [],
         "adherence_preview": {"taken": taken, "missed": missed},
     }
@@ -71,14 +97,21 @@ def _build_dashboard(uid: int):
 @bp.get("/dashboard")
 @jwt_required()
 def dashboard():
-    uid = int(get_jwt_identity())
+    try:
+        uid = int(get_jwt_identity())
+    except (TypeError, ValueError):
+        return err("Invalid session", status=401)
     key = cache_key_dashboard(uid)
     bypass = request.args.get("refresh") == "1"
     if not bypass:
         cached = get_cache(key)
         if cached:
             return ok(cached)
-    payload = _build_dashboard(uid)
+    try:
+        payload = _build_dashboard(uid)
+    except Exception:
+        logger.exception("dashboard failed for user_id=%s", uid)
+        return err("Dashboard temporarily unavailable", status=500)
     set_cache(key, payload)
     return ok(payload)
 

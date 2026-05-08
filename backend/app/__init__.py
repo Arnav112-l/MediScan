@@ -62,11 +62,12 @@ def create_app(config_name: str | None = None):
             {
                 "service": "medscan-api",
                 "status": "ok",
-                "docs": "REST APIs live under /api/* — try GET /api/health",
+                "docs": "REST APIs live under /api/* — try GET /api/health. Replace the query value with any medicine name.",
                 "examples": [
                     "GET /health",
                     "GET /api/health",
                     "GET /api/search-medicine?query=paracetamol",
+                    "GET /api/search-medicine?query=vitamin+d3",
                 ],
             }
         )
