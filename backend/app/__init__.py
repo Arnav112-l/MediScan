@@ -16,6 +16,24 @@ from app.utils.sqlite_schema import patch_sqlite_users_columns
 _log = logging.getLogger(__name__)
 
 
+def _cors_origins():
+    """
+    Comma-separated list, or * for all.
+    Empty env var must not mean "allow nothing" — that breaks browsers when VITE_API_URL
+    points the SPA at Render (cross-origin).
+    """
+    raw = os.environ.get("CORS_ORIGINS")
+    if raw is None:
+        return "*"
+    s = raw.strip()
+    if not s or s == "*":
+        return "*"
+    parts = [p.strip() for p in s.split(",") if p.strip()]
+    if not parts:
+        return "*"
+    return parts if len(parts) > 1 else parts[0]
+
+
 def create_app(config_name: str | None = None):
     configure_logging(os.environ.get("LOG_LEVEL"))
     app = Flask(__name__)
@@ -33,7 +51,12 @@ def create_app(config_name: str | None = None):
 
     db.init_app(app)
     jwt.init_app(app)
-    CORS(app, resources={r"/api/*": {"origins": os.environ.get("CORS_ORIGINS", "*")}})
+    CORS(
+        app,
+        origins=_cors_origins(),
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    )
 
     @jwt.unauthorized_loader
     def _jwt_unauthorized(reason):

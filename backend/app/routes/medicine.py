@@ -26,6 +26,7 @@ def _uid_optional():
 
 
 @bp.get("/search-medicine")
+@bp.get("/search_medicine")
 @jwt_required(optional=True)
 def search_medicine_route():
     q = request.args.get("query") or request.args.get("q") or ""

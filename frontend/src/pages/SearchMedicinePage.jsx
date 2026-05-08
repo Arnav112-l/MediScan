@@ -29,7 +29,20 @@ const SearchMedicinePage = () => {
       const results = await searchMedicines(query, { refresh: Boolean(opts.refresh) });
       dispatch(setSearchResults(results));
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Search failed';
+      const status = err.response?.status;
+      const body = err.response?.data;
+      const backendMsg =
+        typeof body === 'object' && body !== null && typeof body.message === 'string'
+          ? body.message
+          : typeof body === 'string'
+            ? body
+            : null;
+      let msg = backendMsg || err.message || 'Search failed';
+      if (status === 502) {
+        msg =
+          backendMsg ||
+          'Live prices could not be loaded (502). Usually every pharmacy scrape failed, or the request timed out. Retry shortly; on Vercel set VITE_API_URL to your Render API origin so /api hits Render directly. Ensure Render runs the Docker image with Playwright/Chromium.';
+      }
       setFetchError(msg);
       dispatch(setError(msg));
       dispatch(setSearchResults([]));
