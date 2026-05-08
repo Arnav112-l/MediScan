@@ -6,6 +6,7 @@ import os
 
 from flask import Flask, jsonify
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 
 from app.config import get_config
 from app.extensions import db, jwt
@@ -49,6 +50,8 @@ def create_app(config_name: str | None = None):
 
     @app.errorhandler(Exception)
     def _handle_exception(exc):
+        if isinstance(exc, HTTPException):
+            return jsonify({"status": "error", "message": exc.description}), exc.code
         _log.exception("Unhandled exception: %s", exc)
         return jsonify({"status": "error", "message": f"Internal server error: {exc}"}), 500
 
@@ -59,9 +62,10 @@ def create_app(config_name: str | None = None):
             {
                 "service": "medscan-api",
                 "status": "ok",
-                "docs": "REST APIs live under /api/* — try GET /health",
+                "docs": "REST APIs live under /api/* — try GET /api/health",
                 "examples": [
                     "GET /health",
+                    "GET /api/health",
                     "GET /api/search-medicine?query=paracetamol",
                 ],
             }
@@ -69,6 +73,11 @@ def create_app(config_name: str | None = None):
 
     @app.get("/health")
     def health():
+        return jsonify({"status": "ok", "service": "medscan-api"})
+
+    @app.get("/api/health")
+    def api_health():
+        """Same as /health; Vercel and clients call /api/* only."""
         return jsonify({"status": "ok", "service": "medscan-api"})
 
     from app.routes import (
