@@ -16,5 +16,6 @@ ENV PYTHONPATH=/app
 ENV MEDSCAN_UPLOAD_FOLDER=/app/uploads
 RUN mkdir -p /app/uploads
 
+# Render (and other hosts) set PORT; local/docker-compose uses 5000 when unset
 EXPOSE 5000
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "wsgi:app"]
+CMD ["sh", "-c", "exec gunicorn -w 2 -b 0.0.0.0:${PORT:-5000} wsgi:app"]
