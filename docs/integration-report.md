@@ -17,7 +17,7 @@
 ## Configuration
 
 1. **Development:** run API on `http://127.0.0.1:5000`, UI on Vite (e.g. `http://localhost:5173`). Do **not** set `VITE_API_URL` so Axios hits the same origin and Vite proxies `/api` and `/health` (see `vite.config.js`).
-2. **Production:** set `VITE_API_URL` to the public API origin (must enable CORS on the API for that origin).
+2. **Production (Azure):** set `VITE_API_URL` to the Azure App Service URL (e.g. `https://medscan-api.azurewebsites.net`). Set `CORS_ORIGINS` on the backend to the Azure Static Web App origin.
 
 ## Endpoint map (implemented in `services/api.js`)
 

@@ -41,7 +41,7 @@ const SearchMedicinePage = () => {
       if (status === 502) {
         msg =
           backendMsg ||
-          'Live prices could not be loaded (502). Usually every pharmacy scrape failed, or the request timed out. Retry shortly; on Vercel set VITE_API_URL to your Render API origin so /api hits Render directly. Ensure Render runs the Docker image with Playwright/Chromium.';
+          'Live prices could not be loaded (502). Usually every pharmacy scrape failed, or the request timed out. Retry shortly. Ensure the backend is running the Docker image with Playwright/Chromium.';
       }
       setFetchError(msg);
       dispatch(setError(msg));

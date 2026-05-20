@@ -20,7 +20,7 @@ def _cors_origins():
     """
     Comma-separated list, or * for all.
     Empty env var must not mean "allow nothing" — that breaks browsers when VITE_API_URL
-    points the SPA at Render (cross-origin).
+    points the SPA at the API host (cross-origin).
     """
     raw = os.environ.get("CORS_ORIGINS")
     if raw is None:
@@ -101,7 +101,7 @@ def create_app(config_name: str | None = None):
 
     @app.get("/api/health")
     def api_health():
-        """Same as /health; Vercel and clients call /api/* only."""
+        """Same as /health; frontend and clients call /api/* only."""
         return jsonify({"status": "ok", "service": "medscan-api"})
 
     from app.routes import (

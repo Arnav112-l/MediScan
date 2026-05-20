@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from app.extensions import db
 from app.models.prescription import Prescription
 from app.models.search_history import SearchHistory
 from app.utils.responses import ok
@@ -19,7 +20,7 @@ def history():
     per_page = min(request.args.get("per_page", type=int, default=20), 100)
     offset = max(0, (page - 1) * per_page)
 
-    sq = SearchHistory.query.filter_by(user_id=uid).order_by(SearchHistory.created_at.desc())
+    sq = db.session.query(SearchHistory).filter_by(user_id=uid).order_by(SearchHistory.created_at.desc())
     total_searches = sq.count()
     searches = sq.offset(offset).limit(per_page).all()
 

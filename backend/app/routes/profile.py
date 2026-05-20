@@ -83,7 +83,7 @@ def reset_user_activity():
     # Order: adherence logs reference reminders
     AdherenceLog.query.filter_by(user_id=uid).delete(synchronize_session=False)
     Reminder.query.filter_by(user_id=uid).delete(synchronize_session=False)
-    SearchHistory.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    db.session.query(SearchHistory).filter_by(user_id=uid).delete(synchronize_session=False)
     LabReport.query.filter_by(user_id=uid).delete(synchronize_session=False)
     Prescription.query.filter_by(user_id=uid).delete(synchronize_session=False)
     db.session.commit()

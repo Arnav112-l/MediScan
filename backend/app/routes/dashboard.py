@@ -7,6 +7,7 @@ from datetime import datetime
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from app.extensions import db
 from app.models.prescription import Prescription
 from app.models.reminder import AdherenceLog, Reminder
 from app.models.search_history import SearchHistory
@@ -50,7 +51,7 @@ def _build_dashboard(uid: int):
     adherence_pct = round(100.0 * taken / denom, 1) if denom else 0.0
 
     recent = (
-        SearchHistory.query.filter_by(user_id=uid).order_by(SearchHistory.created_at.desc()).limit(8).all()
+        db.session.query(SearchHistory).filter_by(user_id=uid).order_by(SearchHistory.created_at.desc()).limit(8).all()
     )
 
     # Monthly savings estimate from recent search summaries (best-effort)
@@ -121,7 +122,7 @@ def dashboard():
 def dashboard_compare_preview():
     """Optional: run live compare for last search query (heavy)."""
     uid = int(get_jwt_identity())
-    recent = SearchHistory.query.filter_by(user_id=uid).order_by(SearchHistory.created_at.desc()).first()
+    recent = db.session.query(SearchHistory).filter_by(user_id=uid).order_by(SearchHistory.created_at.desc()).first()
     if not recent:
         return ok(None)
     payload, code, _msg = search_medicine(recent.query, user_id=None)

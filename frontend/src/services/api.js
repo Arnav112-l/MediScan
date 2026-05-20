@@ -5,7 +5,7 @@
  */
 import client, { setToken } from '../api/client';
 
-const SCRAPE_TIMEOUT_MS = 120_000;
+const SCRAPE_TIMEOUT_MS = 180_000;
 
 /** Backend returns either `{ status, data }` or legacy flat JSON */
 function unwrap(res) {

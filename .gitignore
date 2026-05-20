@@ -10,3 +10,11 @@ node_modules/
 dist/
 *.egg-info/
 *.db
+
+# Azure
+.azure/
+
+# Dev / debug artifacts
+backend/probe_*.py
+backend-logs/
+backend-logs.zip
